@@ -28,7 +28,7 @@ object BackpressureBasics extends App {
     x + 1
   }
 
-  // sink will buffer 16 messages, once sink it consumes 8 of them, simpleFlow again fetches 8 more messages
+  // sink will buffer 16 messages, once sink consumes 8 of them, simpleFlow again fetches 8 more messages
 //  fastSource.async
 //    .via(simpleFlow).async
 //    .to(slowSink).run()

@@ -46,8 +46,10 @@ object OperatorFusion extends App {
     x * 10
   }
 
+  // each output will be printed after 2 seconds
   // simpleSource.via(complexFlow).via(complexFlow2).to(simpleSink).run()
 
+  // each output will be printed after 1 second
   // async boundary
   /*simpleSource.via(complexFlow).async // runs on one actor
     .via(complexFlow2).async  // runs on other actor
