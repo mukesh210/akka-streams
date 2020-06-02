@@ -72,7 +72,7 @@ object OpenGraphs extends App {
   // step 1
   val complexFlow = Flow.fromGraph(
     GraphDSL.create() { implicit builder =>
-      import GraphDSL.Implicits._
+      import GraphDSL.Implicits._ // ~> defined on SHAPES... so we need to import this
       //everything operates on SHAPES
       // step 2: define auxiliary SHAPES
       val incrementerShape = builder.add(incrementer)
