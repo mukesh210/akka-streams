@@ -13,7 +13,7 @@ object FaultTolerance extends App {
   implicit val materializer = ActorMaterializer()
 
   // 1 - logging
-  val faultySource = Source(1 to 10).map(e => if(e == 6) throw new RuntimeException else e)
+  val faultySource = Source(1 to 10).map(e => if(e == 3) throw new RuntimeException else e)
   faultySource.log("trackingElements").to(Sink.ignore)
     //.run()
   /*
@@ -30,11 +30,11 @@ object FaultTolerance extends App {
 
   // 3 - recover with another stream
   faultySource.recoverWithRetries(3, {
-    case _ : RuntimeException => Source(90 to 99)
+    case _ : RuntimeException => Source(90 to 93)
   })
     .log("recoverWithRetries")
     .to(Sink.ignore)
-    // .run()
+//     .run()
 
   // 4 - backoff supervision
   val restartSource = RestartSource.onFailuresWithBackoff(
@@ -47,11 +47,11 @@ object FaultTolerance extends App {
   })
     .log("restartBackoff")
     .to(Sink.ignore)
-    // .run()
+//     .run()
 
   // 5 - supervision strategy
   // Akka streams operators by default fail... they are not bounded by supervision strategy
-  val numbers = Source(1 to 20).map(n => if(n == 13) throw new RuntimeException("bad luck") else n).log("supervision")
+  val numbers = Source(1 to 10).map(n => if(n == 5) throw new RuntimeException("bad luck") else n).log("supervision")
   val supervisedNumbers = numbers.withAttributes(ActorAttributes.supervisionStrategy {
     // Resume: Skips faulty element,
     // Stop: stop the stream,

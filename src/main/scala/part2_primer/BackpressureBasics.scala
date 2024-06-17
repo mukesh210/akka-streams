@@ -6,26 +6,28 @@ import akka.stream.scaladsl.{Flow, Sink, Source}
 
 // backpressure is all about slowing down fast producer in presence of slow consumer
 // in Akka streams... consumer drives the flow
+// Read: https://doc.akka.io/docs/akka/current/stream/stream-flows-and-basics.html
 object BackpressureBasics extends App {
 
   implicit val system = ActorSystem("BackpressureBasics")
   implicit val materializer = ActorMaterializer()
 
-  val fastSource = Source(1 to 1000)
+  val fastSource = Source(1 to 100)
   val slowSink = Sink.foreach[Int]{x =>
     Thread.sleep(1000)
     println(s"Sink: ${x}")
   }
 
   // not backpressure because all messages are processed on same actor
-  // fastSource.to(slowSink).run() // fusing?!
+//   fastSource.to(slowSink).run() // fusing?!
 
   // backpressure happens here
-  // fastSource.async.to(slowSink).run()
+  // fastSource will run in one actor, to(slowSink) will run in another actor. Use Async to achieve parallelism
+//  fastSource.async.to(slowSink).run()
 
   val simpleFlow = Flow[Int].map{ x =>
     println(s"Incoming: ${x}")
-    x + 1
+    x
   }
 
   // sink will buffer 16 messages, once sink consumes 8 of them, simpleFlow again fetches 8 more messages
@@ -42,9 +44,10 @@ object BackpressureBasics extends App {
    */
 
   val bufferedFlow = simpleFlow.buffer(10, overflowStrategy = OverflowStrategy.dropHead)
-//  fastSource.async
-//    .via(bufferedFlow).async
-//    .to(slowSink).run()
+  // try out with other overflowStrategy
+  fastSource.async
+    .via(bufferedFlow).async
+    .to(slowSink).run()
   /*
     1 - 16: nobody is backpressured(buffered in sink)
     17-26: flow will buffer, flow will start dropping
@@ -63,5 +66,5 @@ object BackpressureBasics extends App {
 
   // throttling
   import scala.concurrent.duration._
-  fastSource.throttle(2, 1 second).runWith(Sink.foreach(println))
+//  fastSource.throttle(2, 1 second).runWith(Sink.foreach(println))
 }

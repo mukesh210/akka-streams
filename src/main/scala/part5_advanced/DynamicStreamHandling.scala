@@ -20,7 +20,7 @@ object DynamicStreamHandling extends App {
     .log("counter")
   val sink = Sink.ignore
 
-  // single killswitch
+//   single killswitch
 //  val killSwitch = counter
 //    .viaMat(killSwitchFlow)(Keep.right)
 //    .toMat(sink)(Keep.left)
@@ -51,9 +51,9 @@ object DynamicStreamHandling extends App {
 //  counter.runWith(materializedSink)
 
   // BroadcastHub
-  val dynamicBroadcast = BroadcastHub.sink[Int]
-//  val materializedSource = Source(1 to 100).runWith(dynamicBroadcast)
-
+//  val dynamicBroadcast: Sink[Int, Source[Int, NotUsed]] = BroadcastHub.sink[Int]
+//  val materializedSource: Source[Int, NotUsed] = Source(1 to 3).log("broadcastHubSource").runWith(dynamicBroadcast)
+//
 //  materializedSource.runWith(Sink.ignore)
 //  materializedSource.runWith(Sink.foreach[Int](println))
 
@@ -64,8 +64,10 @@ object DynamicStreamHandling extends App {
     *
     * A publisher-subscriber component
     */
-  val merge = MergeHub.source[String]
-  val bcast = BroadcastHub.sink[String]
+    // mergeHub is the publisher to which multiple components can publish
+  val merge: Source[String, Sink[String, NotUsed]] = MergeHub.source[String]
+  // BroadcastHub is the Subscriber to which multiple components can subscribe
+  val bcast: Sink[String, Source[String, NotUsed]] = BroadcastHub.sink[String]
   val (publisherPort, subscriberPort) = merge.toMat(bcast)(Keep.both).run()
 
   subscriberPort.runWith(Sink.foreach[String](e => println(s"I received: ${e}")))

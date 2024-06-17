@@ -14,21 +14,23 @@ object Substreams extends App {
 
   // 1 - grouping a stream by a certain function
   val wordsSource = Source(List("Akka", "is", "amazing", "learning", "substreams"))
+  // groupBy will return stream containing sub-streams.
   val groups = wordsSource.groupBy(30, word => if(word.isEmpty) '\0' else word.toLowerCase().charAt(0))
 
+  // once we attach sink to above stream containing substreams, this sink will be attached to each substream separately.
   groups.to(Sink.fold(0)((count, word) => {
     val newCount = count + 1
     println(s"I just received: ${word}, count: ${newCount}")
     newCount
   }))
-    .run()
+//    .run()
   /*
    When we attach consumer to subFlows, every single subFlow/substream will have
    different materialization of consumer
    i.e. in above example, every substream will have different instances of sink
    */
 
-  // 2 - how to merge substreams back
+  // 2 - how to merge substreams back - for tasks that look like async mapReduce
   val textSource = Source(List(
     "I love Akka Streams",
     "this is amazing",
@@ -70,6 +72,6 @@ object Substreams extends App {
   val simpleSource = Source(1 to 5)
   simpleSource.flatMapConcat(x => Source(x to 3 * x)).runWith(Sink.foreach(println))
 
-  // flatMapMerge will merge with parallelism = 2, at a time, 2 substream will be merged in no defined order
+//   flatMapMerge will merge with parallelism = 2, at a time, 2 substream will be merged in no defined order
   simpleSource.flatMapMerge(2, x => Source(x to 3 * x)).runWith(Sink.foreach(println))
 }

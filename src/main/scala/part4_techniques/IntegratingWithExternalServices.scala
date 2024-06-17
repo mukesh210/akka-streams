@@ -1,7 +1,8 @@
 package part4_techniques
 
-import java.util.Date
+import akka.NotUsed
 
+import java.util.Date
 import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
@@ -42,29 +43,40 @@ object IntegratingWithExternalServices extends App {
       "Lady Gaga" -> "ladygaga@gmail.com"
     )
 
-    def processEvent(pagerEvent: PagerEvent) = Future {
+    def processEvent(pagerEvent: PagerEvent) = {
+      println(s"Thread executing processEvents is: ${Thread.currentThread()}")
       val engineerIndex = pagerEvent.date.toInstant.getEpochSecond / (24 * 3600) % engineers.length
       val engineer = engineers(engineerIndex.toInt)
       val engineerEmail = emails(engineer)
 
       // page the engineer
       println(s"Sending engineer ${engineerEmail} a high priority notification: ${pagerEvent}")
-      Thread.sleep(1000)
-      engineerEmail
+      Future {
+        Thread.sleep(1000)
+        println(s"Thread executing processEvent future is: ${Thread.currentThread()}")
+        engineerEmail
+      }
     }
   }
 
+//  implicit val dispatcher = system.dispatchers.lookup("dedicated-dispatcher")
   // Interested in events of the type "AkkaInfra"
-  val infraEvents = eventSource.filter(_.application == "AkkaInfra")
+  val infraEvents: Source[PagerEvent, NotUsed] = eventSource.filter(_.application == "AkkaInfra")
   // parallelism number of futures can run together
-  val pagedEngineerEmails = infraEvents.mapAsync(parallelism = 4)(event => PagerService.processEvent(event))
+  val pagedEngineerEmails = infraEvents.mapAsync(parallelism = 1){event =>
+    println(s"Thread executing mapAsync function: ${Thread.currentThread()}")
+    PagerService.processEvent(event).map { email =>
+      println(s"Thread processing email result: ${email} :: ${Thread.currentThread()}")
+      email
+    }
+  }
   // mapAsync - guarantee the relative order of elements... waits for current future to complete
   /*
     so if, some future takes longer, entire stream is affected
     If order is of no concern, use `mapAsyncUnordered`
    */
   val pagedEmailsSink = Sink.foreach[String](email => println(s"Successfully sent notification to: ${email}"))
-  // pagedEngineerEmails.to(pagedEmailsSink).run()
+   pagedEngineerEmails.to(pagedEmailsSink).run()
 
   // Use `mapAsync` when working with Futures
 
@@ -98,7 +110,7 @@ object IntegratingWithExternalServices extends App {
   implicit val timeout = Timeout(3 seconds)
   val pagerActor = system.actorOf(Props[PagerActor], "pagerActor")
   val alternativePagedEngineerEmails = infraEvents.mapAsync(parallelism = 4)(event => (pagerActor ? event).mapTo[String])
-  alternativePagedEngineerEmails.to(pagedEmailsSink).run()
+//  alternativePagedEngineerEmails.to(pagedEmailsSink).run()
 
   // do not confuse mapAsync with async(ASYNC boundary)
 }

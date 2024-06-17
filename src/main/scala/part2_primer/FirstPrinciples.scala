@@ -42,7 +42,7 @@ object FirstPrinciples extends App {
   val infiniteSource = Source(Stream.from(1)) // do not confuse Akka stream with a "collection" Stream
 
   import scala.concurrent.ExecutionContext.Implicits.global
-  val futureSource = Source.fromFuture(Future(42))
+  val futureSource: Source[Int, NotUsed] = Source.fromFuture(Future(42))
 
   // sinks
   val theMostBoringSink = Sink.ignore
